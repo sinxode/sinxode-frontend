@@ -1,9 +1,11 @@
 /**
  * GitHub activity feed for Sinxode ticker.
  * - Dev: uses Vite proxy `/gh-api` (optional VITE_GITHUB_TOKEN attached server-side by Vite).
- * - Prod: prefers Django `/api/github/feed/` (use GITHUB_TOKEN on the server).
+ * - Prod: prefers Django API URL from env/fallback (use GITHUB_TOKEN on the server).
  * - Fallback: direct `https://api.github.com` with VITE_GITHUB_TOKEN (often blocked by CORS in browser).
  */
+import { API_HEADERS, buildApiUrl } from '../utils/api'
+
 const USER = 'sinanneyy46'
 
 function pickPushPayload(events) {
@@ -26,7 +28,10 @@ export async function fetchLatestGitHubSignal() {
   const viteToken = import.meta.env.VITE_GITHUB_TOKEN
 
   const tryDjango = async () => {
-    const r = await fetch('/api/github/feed/', { headers: { Accept: 'application/json' } })
+    const r = await fetch(buildApiUrl('/api/github/feed/'), {
+      mode: 'cors',
+      headers: API_HEADERS,
+    })
     if (!r.ok) throw new Error('django_feed')
     return r.json()
   }

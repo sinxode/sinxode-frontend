@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ProjectStackIcon } from '../lib/projectStackIcon'
+import { API_HEADERS, buildApiUrl } from '../utils/api'
 import ProjectModal from './ProjectModal'
 
 function statusClass(status) {
@@ -9,17 +10,60 @@ function statusClass(status) {
     .replace(/_/g, '-')
 }
 
-export default function ProjectGrid({ projects = [], previewCount = null, emptyHint }) {
+export default function ProjectGrid({ projects, previewCount = null, emptyHint }) {
   const [active, setActive] = useState(null)
+  const [resolvedProjects, setResolvedProjects] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+
+  const shouldFetchProjects = !Array.isArray(projects)
+
+  useEffect(() => {
+    if (!shouldFetchProjects) return undefined
+
+    const ac = new AbortController()
+    setLoading(true)
+
+    fetch(buildApiUrl('/api/projects/'), {
+      signal: ac.signal,
+      mode: 'cors',
+      headers: API_HEADERS,
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`status_${r.status}`))))
+      .then((raw) => {
+        if (ac.signal.aborted) return
+        const arr = Array.isArray(raw) ? raw : raw?.results ?? []
+        setResolvedProjects(arr)
+        setLoadError(false)
+      })
+      .catch(() => {
+        if (ac.signal.aborted) return
+        setResolvedProjects([])
+        setLoadError(true)
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setLoading(false)
+      })
+
+    return () => ac.abort()
+  }, [shouldFetchProjects])
+
+  const sourceProjects = shouldFetchProjects ? resolvedProjects : projects || []
 
   const sorted = useMemo(() => {
-    const list = [...(projects || [])]
+    const list = [...sourceProjects]
     list.sort((a, b) => (a.matrix_order ?? 0) - (b.matrix_order ?? 0))
     if (previewCount != null && previewCount > 0) return list.slice(0, previewCount)
     return list
-  }, [projects, previewCount])
+  }, [sourceProjects, previewCount])
 
   if (!sorted.length) {
+    if (loading) {
+      return <p className="project-matrix__empty">Loading project matrix...</p>
+    }
+    if (loadError) {
+      return <p className="project-matrix__empty">Unable to load projects from API.</p>
+    }
     return (
       <p className="project-matrix__empty">
         {emptyHint || 'No projects in matrix. Run: python manage.py seed_project_matrix'}

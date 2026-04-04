@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { API_HEADERS, buildApiUrl } from '../utils/api'
 
 const fallback = {
   uptime: '—',
@@ -15,7 +16,10 @@ export default function OsStatusStrip() {
     let cancelled = false
 
     const pull = () => {
-      fetch('/api/system/status/')
+      fetch(buildApiUrl('/api/system/status/'), {
+        mode: 'cors',
+        headers: API_HEADERS,
+      })
         .then((r) => (r.ok ? r.json() : Promise.reject()))
         .then((json) => {
           if (cancelled) return

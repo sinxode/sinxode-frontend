@@ -3,23 +3,8 @@ import TerminalHero from '../components/TerminalHero'
 import TechStackTerminal from '../components/TechStackTerminal'
 import TechRadar from '../components/TechRadar'
 import ProjectGrid from '../components/ProjectGrid'
-import { useEffect, useState } from 'react'
 
 export default function Home() {
-  const [preview, setPreview] = useState([])
-
-  useEffect(() => {
-    const ac = new AbortController()
-    fetch('/api/projects/', { signal: ac.signal })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((raw) => {
-        const arr = Array.isArray(raw) ? raw : raw.results ?? []
-        setPreview(arr)
-      })
-      .catch(() => setPreview([]))
-    return () => ac.abort()
-  }, [])
-
   return (
     <>
       <TerminalHero />
@@ -38,7 +23,7 @@ export default function Home() {
             View all →
           </Link>
         </div>
-        <ProjectGrid projects={preview} previewCount={2} />
+        <ProjectGrid previewCount={2} />
       </section>
     </>
   )
